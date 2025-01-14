@@ -1,28 +1,36 @@
 # Terraform Best Practices
 
 ## Table of Contents
-1. [Terraform init best practices](#terraform-init-best-practices)
+1. [Introduction](#introduction)
+2. [Terraform init best practices](#terraform-init-best-practices)
+   1. [Example 1](#example-1)
+   2. [Example of correct github actions](#example-of-correct-github-actions)
+3. [Terraform plan and apply best practices](#terraform-plan-and-apply-best-practices)
+   1. [Example 3](#example-3)
+4. [Terraform -input=false](#terraform--inputfalse)
 
 ## Introduction
 This document is a collection of best practices for using Terraform. It is based on the experience of the author and the community. The goal is to provide a set of best practices that can be used to improve the quality of Terraform code and to help avoid common pitfalls. This repository assumes you have basic knowledge of terraform.
 
 ## Terraform init best practices
 
-To start working with our Terraform code, you need to initialize it first using the `terraform init` command. However, when using the `terraform validate` or `terraform fmt` commands, there is no need to initialize the code along with the backend.
+To start working with our Terraform code, you need to initialize it first using the `terraform init` command. However, when using the `terraform validate` or `terraform fmt` commands, there is no need to initialize the code along with the backend. 
 
-Wrong way:
+### Example 1
+
+**Wrong way:**
 ```bash
 terraform init -backend-config="bucket=mybucket" 
 terraform validate
 ```
 
-Correct way:
+**Correct way:**
 ```bash
 terraform init -backend=false
 terraform validate
 ```
 
-Example of correct github actions:
+### Example of correct github actions:
 ```yaml
 name: Terraform Validate
 
@@ -61,9 +69,11 @@ If in our GitHub Action we are only performing code validation or setting canoni
 
 ## Terraform plan and apply best practices
 
-When running `terraform plan` or `terraform apply`, it is important to use the `-out` flag to save the plan to a file. This is useful for reviewing the plan before applying it.
+When running `terraform plan` and `terraform apply`, it is important to use the `-out` flag for `terraform plan` command to save the plan to a file. This is useful for reviewing the plan before applying it.
 
-Wrong way:
+### Example 2
+
+**Wrong way:**
 ```bash
 terraform plan
 terraform apply -auto-approve
@@ -71,18 +81,19 @@ terraform apply -auto-approve
 
 Using the terraform plan command without the `-out` switch creates a so-called speculative plan. It only shows what the environment might look like, what the changes will be. This command is for safe planning and reviewing the configuration and changes you are planning. Later issuing the terraform apply command will apply all the changes that occur in your state and in the code. Remember that without the `-out` switch, someone with their changes can push you. And if you use the approach without `-out` in the pipeline, for example with the `-auto-approve` switch, someone else's changes can actually go to your account. They will be executed in your pipeline.
 
-Correct way:
+**Correct way:**
 ```bash
 terraform plan -out=tfplan
 terraform apply tfplan
 ```
+
 A plan made with the `-out=tfplan` switch gives you 100% that after issuing the terraform apply tfplan command, only and exclusively those changes will be executed that you have reviewed, approved and want to be made in your configuration. 
 
 <b>REMEMBER</b> - always use the generated plan in the pipeline and work only on it. 
 
 <b>IMPORTANT</b> - such a plan can be used only once and has an identifier in it that does not allow it to be used if, for example, another plan was used, or some changes were made in your state.
 
-### Example
+### Example 3
 The example is to illustrate the problem of using plan and apply without the -out switch.
 
 ```bash
@@ -99,12 +110,12 @@ terraform apply tfplan
 # Now we can see that we have only the changes that we expected.
 ``` 
 
+## Terraform -auto-approve
+
+When running `terraform apply` in a pipeline, we usually use it with the previous plan. There is no need to use `-auto-approve` when creating our pipeline because `terraform apply tfplan` is already automatically executed based on our `tfplan` plan file
+
 ## Terraform -input=false
 
 When running `terraform plan` in a pipeline, it is important to use the `-input=false` flag to avoid the need for user input.
 
 This is a good practice to avoid blocking the pipeline, which may hang. This is because the `terraform plan` command requires user input to provide all used variables declerated in variable block. By using the `-input=false` flag, we can avoid this problem. Then the terraform plan command will report an error if you forget to specify any variables.
-
-
-
-
